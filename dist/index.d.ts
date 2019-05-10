@@ -1,5 +1,3 @@
-import * as interfaces from './interfaces';
-import * as constants from './constants';
 export { Lambda } from './Lambda';
-export { interfaces };
-export { constants };
+export { ILambdaResponse, ILambdaRequestIdentity, ILambdaRequestContext, ILambdaEvent, ILambdaContext, ILambdaCallback } from './interfaces';
+export { EHttpMethod } from './constants';
