@@ -1,13 +1,16 @@
 {
   "name": "severjs",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A simple typescript AWS Lambda framework.",
   "keywords": [
     "typescript",
     "aws",
     "lambda"
   ],
-  "main": "./dist/Sever.js",
+  "main": "./dist/index.js",
+  "bin": {
+    "sever": "dist/cli.js"
+  },
   "scripts": {
     "build": "rm -rf ./dist/ && tsc",
     "clean": "rm -rf ./dist/",
@@ -15,9 +18,15 @@
     "posttest": "codecov"
   },
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "archiver": "^3.0.0",
+    "shelljs": "^0.8.3"
+  },
   "devDependencies": {
+    "@types/archiver": "^2.1.3",
     "@types/jasmine": "^2.6.0",
+    "@types/node": "^12.0.0",
+    "@types/shelljs": "^0.8.5",
     "codecov": "^2.3.0",
     "jasmine": "^2.8.0",
     "karma": "^1.5.0",
@@ -29,7 +38,7 @@
   },
   "homepage": "https://github.com/malero/severjs",
   "git": "https://github.com/malero/severjs",
-  "typings": "./dist/Sever.d.ts",
+  "typings": "./dist/index.d.ts",
   "author": "Malero <contact@maleero.com> (http://www.maleero.com/)",
   "bugs": {
     "url": "https://github.com/malero/severjs/issues",

@@ -1,38 +1,28 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var EHttpMethod;
-(function (EHttpMethod) {
-    EHttpMethod["GET"] = "GET";
-    EHttpMethod["PUT"] = "PUT";
-    EHttpMethod["POST"] = "POST";
-    EHttpMethod["DELETE"] = "DELETE";
-    EHttpMethod["OPTIONS"] = "OPTIONS";
-    EHttpMethod["HEAD"] = "HEAD";
-    EHttpMethod["PATCH"] = "PATCH";
-})(EHttpMethod = exports.EHttpMethod || (exports.EHttpMethod = {}));
-;
+var constants_1 = require("./constants");
 var Lambda = /** @class */ (function () {
     function Lambda(event, context, callback) {
         this.event = event;
         this.context = context;
         this.callback = callback;
         switch (event.httpMethod) {
-            case EHttpMethod.GET:
+            case constants_1.EHttpMethod.GET:
                 this.get();
                 break;
-            case EHttpMethod.POST:
+            case constants_1.EHttpMethod.POST:
                 this.post();
                 break;
-            case EHttpMethod.PUT:
+            case constants_1.EHttpMethod.PUT:
                 this.put();
                 break;
-            case EHttpMethod.DELETE:
+            case constants_1.EHttpMethod.DELETE:
                 this.delete();
                 break;
-            case EHttpMethod.HEAD:
+            case constants_1.EHttpMethod.HEAD:
                 this.head();
                 break;
-            case EHttpMethod.PATCH:
+            case constants_1.EHttpMethod.PATCH:
                 this.patch();
                 break;
             default:
