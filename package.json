@@ -1,0 +1,38 @@
+{
+  "name": "severjs",
+  "version": "0.1.2",
+  "description": "s",
+  "keywords": [
+    "typescript",
+    "aws",
+    "lambda"
+  ],
+  "main": "./dist/Sever.js",
+  "scripts": {
+    "build": "rm -rf ./dist/ && tsc",
+    "clean": "rm -rf ./dist/",
+    "test": "karma start --single-run",
+    "posttest": "codecov"
+  },
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jasmine": "^2.6.0",
+    "codecov": "^2.3.0",
+    "jasmine": "^2.8.0",
+    "karma": "^1.5.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-jasmine": "^1.1.0",
+    "karma-typescript": "^3.0.13",
+    "nyc": "^11.5.0",
+    "typescript": "^2.9.2"
+  },
+  "homepage": "https://github.com/malero/severjs",
+  "git": "https://github.com/malero/severjs",
+  "typings": "./dist/Sever.d.ts",
+  "author": "Malero <contact@maleero.com> (http://www.maleero.com/)",
+  "bugs": {
+    "url": "https://github.com/malero/severjs/issues",
+    "email": "contact@maleero.com"
+  }
+}
