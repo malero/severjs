@@ -2,6 +2,10 @@
 import * as archiver from 'archiver';
 import * as fs from 'fs';
 import * as shell from 'shelljs';
+import * as aws from 'aws-sdk';
+
+// Load credentials and set region from JSON file
+aws.config.loadFromPath('./aws.json');
 
 for (let j = 0; j < process.argv.length; j++) {  
     console.log(`${j}: ${process.argv[j]}`);
@@ -10,26 +14,36 @@ for (let j = 0; j < process.argv.length; j++) {
 const lambdaRegex: RegExp = /([^\.]+)\.lambda\.ts$/;
 const lambdas: string[] = [];
 
-const dir: string = `./build/`;
-if (!fs.existsSync(dir)){
-    fs.mkdirSync(dir);
+function touchDirectories(directories: string[]): void {
+    for (const dir of directories) {
+        if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir);
+        }
+    }
 }
+
+let directories: string[] = [
+    `./build/`,
+    `./dist/`,
+];
+touchDirectories(directories);
+
+
 
 const items = fs.readdirSync('./src');
     
 for (var i=0; i<items.length; i++) {
     const match: RegExpExecArray | null = lambdaRegex.exec(items[i]);
     if (match)
-        console.log('Match?', items[i], match[1]);
-    if (match)
         lambdas.push(match[1]);
 }
 
 for (const lambda of lambdas) {
-    const dir: string = `./build/${lambda}/`;
-    if (!fs.existsSync(dir)){
-        fs.mkdirSync(dir);
-    }
+    directories = [
+        `./build/${lambda}/`,
+        `./dist/${lambda}/`,
+    ];
+    touchDirectories(directories);
 
     console.log(`Creating lambda function ${lambda}.`);
     fs.writeFileSync(`./build/${lambda}/main.ts`, `
@@ -42,5 +56,15 @@ for (const lambda of lambdas) {
     `);
        
     fs.copyFileSync(`./src/${lambda}.lambda.ts`, `./build/${lambda}/${lambda}.lambda.ts`);
-    shell.exec(`tsc ./build/${lambda}/main.ts --outFile ./build/${lambda}/main.js`);
+    shell.exec(`tsc ./build/${lambda}/main.ts --outDir ./dist/${lambda}/`);
+
+    var output = fs.createWriteStream(`./dist/${lambda}/${lambda}.zip`);
+    var archive = archiver('zip', {
+        zlib: { level: 9 } // Sets the compression level.
+    });
+    archive.pipe(output);
+    archive.glob(`*.js`, {
+        cwd: `./dist/${lambda}/`
+    });
+    archive.finalize();
 }
