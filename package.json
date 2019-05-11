@@ -1,6 +1,6 @@
 {
   "name": "severjs",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A simple typescript AWS Lambda framework.",
   "keywords": [
     "typescript",
@@ -9,7 +9,7 @@
   ],
   "main": "./dist/index.js",
   "bin": {
-    "sever": "dist/cli/index.js"
+    "sever": "dist/cli.js"
   },
   "scripts": {
     "build": "rm -rf ./dist/ && tsc",
