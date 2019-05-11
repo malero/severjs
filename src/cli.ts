@@ -1,8 +1,17 @@
 #! /usr/bin/env node
+import * as rimraf from 'rimraf';
 import * as aws from 'aws-sdk';
 import * as fs from 'fs';
 import * as shell from 'shelljs';
 import * as archiver from 'archiver';
+
+// Load credentials and set region from JSON file
+aws.config.loadFromPath('./aws.json');
+
+const serviceJSON = fs.readFileSync('./service.json');  
+let serviceConfiguration: any = JSON.parse(serviceJSON.toString());  
+
+console.log('Building service: ', serviceConfiguration.name);
 
 function touchDirectories(directories: string[]): void {
     for (const dir of directories) {
@@ -17,9 +26,11 @@ function publishLambda(lambda: string): void {
         apiVersion: '2015-03-31',
         region: 'us-west-2'
     });
+    const functionName: string = `${serviceConfiguration.name}${lambda}`;
+    console.log(`Publishing lambda function ${functionName}.`);
 
     var params = {
-        FunctionName: lambda,
+        FunctionName: functionName,
         Code: {
             ZipFile: fs.readFileSync(`./dist/${lambda}/${lambda}.zip`)
         },
@@ -29,9 +40,10 @@ function publishLambda(lambda: string): void {
         MemorySize: 128,
         Publish: true
     };
-    awsLambda.deleteFunction({FunctionName: lambda}, (data) => {
+    /*awsLambda.deleteFunction({FunctionName: functionName}, (data) => {
         console.log(data);
     });
+    */
     awsLambda.createFunction(params as any, function(err: any, data: any) {
         if (err) {
             console.log(err);
@@ -46,7 +58,6 @@ function discoverLambdaFunctions(): string[] {
     const lambdas: string[] = [];
     
     let directories: string[] = [
-        `./build/`,
         `./dist/`,
     ];
     touchDirectories(directories);
@@ -62,15 +73,13 @@ function discoverLambdaFunctions(): string[] {
     return lambdas;
 }
 
-function buildLambda(lambda: string): void {
-    const directories: string[] = [
-        `./build/${lambda}/`,
-        `./dist/${lambda}/`,
-    ];
-    touchDirectories(directories);
+function buildLambda(lambda: string, callback?: any): void {
+    const lambdaDist: string = `./dist/${lambda}/`;
+    rimraf.sync(lambdaDist);
+    touchDirectories([lambdaDist]);
 
     console.log(`Building lambda function ${lambda}.`);
-    fs.writeFileSync(`./build/${lambda}/main.ts`, `
+    fs.writeFileSync(`./src/main.ts`, `
         import { ILambdaEvent, ILambdaContext, ILambdaCallback } from "severjs";
         import { ${lambda} } from "./${lambda}.lambda";
 
@@ -79,23 +88,23 @@ function buildLambda(lambda: string): void {
         }
     `);
     
-    fs.copyFileSync(`./src/${lambda}.lambda.ts`, `./build/${lambda}/${lambda}.lambda.ts`);
-    shell.exec(`tsc ./build/${lambda}/main.ts --outDir ./dist/${lambda}/`);
+    shell.exec(`tsc ./src/main.ts --outDir ./dist/${lambda}/`);
 
     var output = fs.createWriteStream(`./dist/${lambda}/${lambda}.zip`);
+    output.on('close', () => {
+        if (callback) callback();
+    });
+
     var archive = archiver('zip', {
-        zlib: { level: 5 } // Sets the compression level.
+        zlib: { level: 0 } // Sets the compression level.
     });
     archive.pipe(output);
-    archive.glob(`*.js`, {
-        cwd: `./dist/${lambda}/`,
-        root: ''
+    archive.glob(`**/*.js`, {
+        cwd: `./dist/${lambda}/`
     });
     archive.finalize();
+    fs.unlinkSync(`./src/main.ts`);
 }
-
-// Load credentials and set region from JSON file
-aws.config.loadFromPath('./aws.json');
 
 if (process.argv.length == 2) {
 
@@ -110,11 +119,15 @@ if (process.argv.length == 2) {
     }
 } else if (process.argv[2] === 'publish') {
     if (process.argv.length >= 4) {
-        publishLambda(process.argv[3]);
+        buildLambda(process.argv[3], () => {
+            publishLambda(process.argv[3]); 
+        });
     } else {
         const lambdas: string[] = discoverLambdaFunctions();
         for (const lambda of lambdas) {
-            publishLambda(lambda);
+            buildLambda(lambda, () => {
+                publishLambda(lambda);
+            });
         }
     }
 }

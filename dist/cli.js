@@ -1,10 +1,16 @@
 #! /usr/bin/env node
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+var rimraf = require("rimraf");
 var aws = require("aws-sdk");
 var fs = require("fs");
 var shell = require("shelljs");
 var archiver = require("archiver");
+// Load credentials and set region from JSON file
+aws.config.loadFromPath('./aws.json');
+var serviceJSON = fs.readFileSync('./service.json');
+var serviceConfiguration = JSON.parse(serviceJSON.toString());
+console.log('Building service: ', serviceConfiguration.name);
 function touchDirectories(directories) {
     for (var _i = 0, directories_1 = directories; _i < directories_1.length; _i++) {
         var dir = directories_1[_i];
@@ -18,8 +24,10 @@ function publishLambda(lambda) {
         apiVersion: '2015-03-31',
         region: 'us-west-2'
     });
+    var functionName = "" + serviceConfiguration.name + lambda;
+    console.log("Publishing lambda function " + functionName + ".");
     var params = {
-        FunctionName: lambda,
+        FunctionName: functionName,
         Code: {
             ZipFile: fs.readFileSync("./dist/" + lambda + "/" + lambda + ".zip")
         },
@@ -29,9 +37,10 @@ function publishLambda(lambda) {
         MemorySize: 128,
         Publish: true
     };
-    awsLambda.deleteFunction({ FunctionName: lambda }, function (data) {
+    /*awsLambda.deleteFunction({FunctionName: functionName}, (data) => {
         console.log(data);
     });
+    */
     awsLambda.createFunction(params, function (err, data) {
         if (err) {
             console.log(err);
@@ -45,7 +54,6 @@ function discoverLambdaFunctions() {
     var lambdaRegex = /([^\.]+)\.lambda\.ts$/;
     var lambdas = [];
     var directories = [
-        "./build/",
         "./dist/",
     ];
     touchDirectories(directories);
@@ -57,29 +65,28 @@ function discoverLambdaFunctions() {
     }
     return lambdas;
 }
-function buildLambda(lambda) {
-    var directories = [
-        "./build/" + lambda + "/",
-        "./dist/" + lambda + "/",
-    ];
-    touchDirectories(directories);
+function buildLambda(lambda, callback) {
+    var lambdaDist = "./dist/" + lambda + "/";
+    rimraf.sync(lambdaDist);
+    touchDirectories([lambdaDist]);
     console.log("Building lambda function " + lambda + ".");
-    fs.writeFileSync("./build/" + lambda + "/main.ts", "\n        import { ILambdaEvent, ILambdaContext, ILambdaCallback } from \"severjs\";\n        import { " + lambda + " } from \"./" + lambda + ".lambda\";\n\n        export function dispatch(event: ILambdaEvent, context: ILambdaContext, callback: ILambdaCallback): void {\n        new " + lambda + "(event, context, callback);\n        }\n    ");
-    fs.copyFileSync("./src/" + lambda + ".lambda.ts", "./build/" + lambda + "/" + lambda + ".lambda.ts");
-    shell.exec("tsc ./build/" + lambda + "/main.ts --outDir ./dist/" + lambda + "/");
+    fs.writeFileSync("./src/main.ts", "\n        import { ILambdaEvent, ILambdaContext, ILambdaCallback } from \"severjs\";\n        import { " + lambda + " } from \"./" + lambda + ".lambda\";\n\n        export function dispatch(event: ILambdaEvent, context: ILambdaContext, callback: ILambdaCallback): void {\n        new " + lambda + "(event, context, callback);\n        }\n    ");
+    shell.exec("tsc ./src/main.ts --outDir ./dist/" + lambda + "/");
     var output = fs.createWriteStream("./dist/" + lambda + "/" + lambda + ".zip");
+    output.on('close', function () {
+        if (callback)
+            callback();
+    });
     var archive = archiver('zip', {
-        zlib: { level: 5 } // Sets the compression level.
+        zlib: { level: 0 } // Sets the compression level.
     });
     archive.pipe(output);
-    archive.glob("*.js", {
-        cwd: "./dist/" + lambda + "/",
-        root: ''
+    archive.glob("**/*.js", {
+        cwd: "./dist/" + lambda + "/"
     });
     archive.finalize();
+    fs.unlinkSync("./src/main.ts");
 }
-// Load credentials and set region from JSON file
-aws.config.loadFromPath('./aws.json');
 if (process.argv.length == 2) {
 }
 else if (process.argv[2] === 'build') {
@@ -96,13 +103,20 @@ else if (process.argv[2] === 'build') {
 }
 else if (process.argv[2] === 'publish') {
     if (process.argv.length >= 4) {
-        publishLambda(process.argv[3]);
+        buildLambda(process.argv[3], function () {
+            publishLambda(process.argv[3]);
+        });
     }
     else {
         var lambdas = discoverLambdaFunctions();
+        var _loop_1 = function (lambda) {
+            buildLambda(lambda, function () {
+                publishLambda(lambda);
+            });
+        };
         for (var _a = 0, lambdas_2 = lambdas; _a < lambdas_2.length; _a++) {
             var lambda = lambdas_2[_a];
-            publishLambda(lambda);
+            _loop_1(lambda);
         }
     }
 }

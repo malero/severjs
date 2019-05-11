@@ -9,6 +9,7 @@
     "outDir": "./dist",
     "strict": true,
     "experimentalDecorators": true,
+    "resolveJsonModule": true,
     "typeRoots": [
       "node_modules/@types"
     ]

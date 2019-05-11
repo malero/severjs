@@ -19,8 +19,10 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@types/rimraf": "^2.0.2",
     "archiver": "^3.0.0",
     "aws-sdk": "^2.453.0",
+    "rimraf": "^2.6.3",
     "shelljs": "^0.8.3",
     "uuid": "^3.3.2"
   },
