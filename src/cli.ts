@@ -26,32 +26,67 @@ function publishLambda(lambda: string): void {
         apiVersion: '2015-03-31',
         region: 'us-west-2'
     });
+
+    const gateway = new aws.ApiGatewayV2({
+        apiVersion: '2015-03-31',
+        region: 'us-west-2'
+    })
     const functionName: string = `${serviceConfiguration.name}${lambda}`;
     console.log(`Publishing lambda function ${functionName}.`);
 
-    var params = {
+    var functionParams = {
         FunctionName: functionName,
-        Code: {
-            ZipFile: fs.readFileSync(`./dist/${lambda}/${lambda}.zip`)
-        },
         Handler: "main.dispatch",
         Role: process.env.LAMBDA_ROLE,
         Runtime: "nodejs8.10",
         MemorySize: 128,
-        Publish: true
     };
-    /*awsLambda.deleteFunction({FunctionName: functionName}, (data) => {
-        console.log(data);
-    });
-    */
-    awsLambda.createFunction(params as any, function(err: any, data: any) {
+    var codeParams = {
+        FunctionName: functionName,
+        Publish: true
+    }
+    const zipFile: Buffer = fs.readFileSync(`./dist/${lambda}/${lambda}.zip`);
+
+    awsLambda.getFunction({
+        FunctionName: functionName
+    },(err: aws.AWSError, data: aws.Lambda.GetFunctionResponse) => {
         if (err) {
-            console.log(err);
+            const params = Object.assign({}, functionParams);
+            Object.assign(params, codeParams);
+            Object.assign(params, {
+                Code: {
+                    ZipFile: zipFile
+                }
+            })
+            awsLambda.createFunction(params as any, function(err: any, data: any) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    console.log('function created');
+                }
+            });
         } else {
-            console.log('function created');
+            awsLambda.updateFunctionConfiguration(functionParams, function(err: any, data: any) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    console.log('function updated');
+                }
+            });
+            Object.assign(codeParams, {
+                ZipFile: zipFile
+            })
+            awsLambda.updateFunctionCode(codeParams, function(err: any, data: any) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    console.log('function code updated');
+                }
+            });
         }
+        
     });
-}
+ }
 
 function discoverLambdaFunctions(): string[] {
     const lambdaRegex: RegExp = /([^\.]+)\.lambda\.ts$/;

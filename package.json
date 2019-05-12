@@ -1,6 +1,6 @@
 {
   "name": "severjs",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "A simple typescript AWS Lambda framework.",
   "keywords": [
     "typescript",

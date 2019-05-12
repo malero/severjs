@@ -26,27 +26,58 @@ function publishLambda(lambda) {
     });
     var functionName = "" + serviceConfiguration.name + lambda;
     console.log("Publishing lambda function " + functionName + ".");
-    var params = {
+    var functionParams = {
         FunctionName: functionName,
-        Code: {
-            ZipFile: fs.readFileSync("./dist/" + lambda + "/" + lambda + ".zip")
-        },
         Handler: "main.dispatch",
         Role: process.env.LAMBDA_ROLE,
         Runtime: "nodejs8.10",
         MemorySize: 128,
+    };
+    var codeParams = {
+        FunctionName: functionName,
         Publish: true
     };
-    /*awsLambda.deleteFunction({FunctionName: functionName}, (data) => {
-        console.log(data);
-    });
-    */
-    awsLambda.createFunction(params, function (err, data) {
+    var zipFile = fs.readFileSync("./dist/" + lambda + "/" + lambda + ".zip");
+    awsLambda.getFunction({
+        FunctionName: functionName
+    }, function (err, data) {
         if (err) {
-            console.log(err);
+            var params = Object.assign({}, functionParams);
+            Object.assign(params, codeParams);
+            Object.assign(params, {
+                Code: {
+                    ZipFile: zipFile
+                }
+            });
+            awsLambda.createFunction(params, function (err, data) {
+                if (err) {
+                    console.log(err);
+                }
+                else {
+                    console.log('function created');
+                }
+            });
         }
         else {
-            console.log('function created');
+            awsLambda.updateFunctionConfiguration(functionParams, function (err, data) {
+                if (err) {
+                    console.log(err);
+                }
+                else {
+                    console.log('function updated');
+                }
+            });
+            Object.assign(codeParams, {
+                ZipFile: zipFile
+            });
+            awsLambda.updateFunctionCode(codeParams, function (err, data) {
+                if (err) {
+                    console.log(err);
+                }
+                else {
+                    console.log('function code updated');
+                }
+            });
         }
     });
 }
